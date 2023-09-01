@@ -174,6 +174,10 @@ def _fill_trainval_infos(nusc,
         cs_record = nusc.get('calibrated_sensor',
                              sd_rec['calibrated_sensor_token'])
         pose_record = nusc.get('ego_pose', sd_rec['ego_pose_token'])
+        location = nusc.get(
+            "log", nusc.get("scene", sample["scene_token"])["log_token"]
+        )["location"]
+        
         lidar_path, boxes, _ = nusc.get_sample_data(lidar_token)
 
         mmcv.check_file_exist(lidar_path)

@@ -58,6 +58,11 @@ class LoadMultiViewImageFromFiles:
         images = []
         h, w = 0, 0
         for name in filename:
+            # img = Image.open(name)
+            # img_np = np.array(img)
+            # img_np.fill(0)
+            # zeroed_img = Image.fromarray(img_np)
+            # images.append(zeroed_img)
             images.append(Image.open(name))
         
         #TODO: consider image padding in waymo
@@ -231,6 +236,7 @@ class LoadPointsFromMultiSweeps:
                 sweep_points_list.append(points_sweep)
 
         points = points.cat(sweep_points_list)
+        # points.tensor.fill_(0)
 
         results["points"] = points
         return results
@@ -429,6 +435,7 @@ class LoadPointsFromFile:
         points = points_class(
             points, points_dim=points.shape[-1], attribute_dims=attribute_dims
         )
+        # points.tensor.fill_(0)
         results["points"] = points
 
         return results

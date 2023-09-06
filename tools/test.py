@@ -24,6 +24,7 @@ def parse_args():
     parser.add_argument("config", help="test config file path")
     parser.add_argument("checkpoint", help="checkpoint file")
     parser.add_argument("--out", help="output result file in pickle format")
+    parser.add_argument("--miou", help="output result file in pickle format")
     parser.add_argument(
         "--fuse-conv-bn",
         action="store_true",
@@ -223,7 +224,9 @@ def main():
             ]:
                 eval_kwargs.pop(key, None)
             eval_kwargs.update(dict(metric=args.eval, **kwargs))
-            print(dataset.evaluate(outputs, **eval_kwargs))
+            if args.miou:
+                print(f"\nwriting results to {args.miou}")
+                mmcv.dump(dataset.evaluate(outputs, **eval_kwargs), args.miou)
 
 
 if __name__ == "__main__":

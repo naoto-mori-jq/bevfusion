@@ -17,6 +17,32 @@ import torch
 
 from .loading_utils import load_augmented_point_cloud, reduce_LiDAR_beams
 
+@PIPELINES.register_module()
+class LoadMultiClassMapFromFiles:
+    def __init__(self, to_float32=False, mode="map1", color_type="unchanged"):
+        self.to_float32 = to_float32
+        self.color_type = color_type
+        self.mode = mode
+
+    def __call__(self, results):
+        filename = results[self.mode + "_paths"]
+        # img is of shape (h, w, c, num_views)
+        # modified for waymo
+        images = []
+        for name in filename:
+            images.append(Image.open(name))
+        results[self.mode + "_filename"] = filename
+        # unravel to list, see `DefaultFormatBundle` in formating.py
+        # which will transpose each image separately and then stack into array
+        results[self.mode] = images
+        # [1600, 900]
+        results[self.mode + "_img_shape"] = images[0].size
+        results[self.mode + "_img_shape"] = images[0].size
+        # Set initial values for default meta_keys
+        results[self.mode + "_pad_shape"] = images[0].size
+        results[self.mode + "_scale_factor"] = 1.0
+        
+        return results
 
 @PIPELINES.register_module()
 class LoadMultiViewImageFromFiles:

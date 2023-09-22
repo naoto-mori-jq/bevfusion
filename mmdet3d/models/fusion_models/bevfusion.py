@@ -67,6 +67,11 @@ class BEVFusion(Base3DFusionModel):
                 }
             )
             self.voxelize_reduce = encoders["radar"].get("voxelize_reduce", True)
+        
+        if encoders.get("map1") is not None:
+            self.encoders["map1"] = build_fuser(encoders["map1"])
+        if encoders.get("map2") is not None:
+            self.encoders["map2"] = build_fuser(encoders["map2"])
 
         if fuser is not None:
             self.fuser = build_fuser(fuser)
@@ -242,6 +247,8 @@ class BEVFusion(Base3DFusionModel):
         metas,
         depths,
         radar=None,
+        map1=None,
+        map2=None,
         gt_masks_bev=None,
         gt_bboxes_3d=None,
         gt_labels_3d=None,
@@ -264,6 +271,8 @@ class BEVFusion(Base3DFusionModel):
                 metas,
                 depths,
                 radar,
+                map1,
+                map2,
                 gt_masks_bev,
                 gt_bboxes_3d,
                 gt_labels_3d,
@@ -287,6 +296,8 @@ class BEVFusion(Base3DFusionModel):
         metas,
         depths=None,
         radar=None,
+        map1=None,
+        map2=None,
         gt_masks_bev=None,
         gt_bboxes_3d=None,
         gt_labels_3d=None,
@@ -319,6 +330,10 @@ class BEVFusion(Base3DFusionModel):
                 feature = self.extract_features(points, sensor)
             elif sensor == "radar":
                 feature = self.extract_features(radar, sensor)
+            elif sensor == "map1":
+                feature = self.encoders["map1"](map1)
+            elif sensor == "map2":
+                feature = self.encoders["map1"](map2)
             else:
                 raise ValueError(f"unsupported sensor: {sensor}")
 

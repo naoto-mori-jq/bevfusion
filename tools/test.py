@@ -207,7 +207,7 @@ def main():
     if rank == 0:
         if args.out:
             print(f"\nwriting results to {args.out}")
-            mmcv.dump(outputs, args.out)
+            # mmcv.dump(outputs, args.out)
             base_dir, file_name = os.path.split(args.out)
             scenes_dir_name = os.path.splitext(file_name)[0]  # ファイル拡張子を除去
             scenes_dir = os.path.join(base_dir, scenes_dir_name)

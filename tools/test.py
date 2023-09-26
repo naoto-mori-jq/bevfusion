@@ -208,6 +208,17 @@ def main():
         if args.out:
             print(f"\nwriting results to {args.out}")
             mmcv.dump(outputs, args.out)
+            base_dir, file_name = os.path.split(args.out)
+            scenes_dir_name = os.path.splitext(file_name)[0]  # ファイル拡張子を除去
+            scenes_dir = os.path.join(base_dir, scenes_dir_name)
+            
+            # scenesディレクトリが存在しない場合は作成
+            os.makedirs(scenes_dir, exist_ok=True)
+            
+            for i, scene in enumerate(outputs):
+                # シーンデータをファイルに保存
+                scene_file = os.path.join(scenes_dir, f'scene_{i}.pkl')
+                mmcv.dump(scene["masks_bev"], scene_file)
         kwargs = {} if args.eval_options is None else args.eval_options
         if args.format_only:
             dataset.format_results(outputs, **kwargs)

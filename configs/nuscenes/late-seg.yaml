@@ -46,13 +46,21 @@ map_classes:
   - divider
 
 input_modality:
-  use_lidar: false
-  use_camera: false
+  use_lidar: true
+  use_camera: true
   use_radar: false
-  use_map: true
+  use_map: false
   use_external: false
 
 train_pipeline:
+  -
+    type: LoadMultiClassMapFromFiles
+    to_float32: true
+    mode: map1
+  -
+    type: LoadMultiClassMapFromFiles
+    to_float32: true
+    mode: map2
   -
     type: LoadMultiViewImageFromFiles
     to_float32: true
@@ -171,6 +179,8 @@ train_pipeline:
     keys:
       - img
       - points
+      - map1
+      - map2
       - gt_bboxes_3d
       - gt_labels_3d
       - gt_masks_bev

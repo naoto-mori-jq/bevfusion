@@ -102,6 +102,10 @@ class DefaultFormatBundle3D:
                     )
         if "img" in results:
             results["img"] = DC(torch.stack(results["img"]), stack=True)
+        if "map1" in results:
+            results["map1"] = DC(torch.stack(results["map1"]), stack=True)
+        if "map2" in results:
+            results["map2"] = DC(torch.stack(results["map2"]), stack=True)
 
         for key in [
             "proposals",

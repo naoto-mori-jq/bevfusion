@@ -92,14 +92,17 @@ def create_nuscenes_infos(root_path,
         print('train sample: {}, val sample: {}'.format(
             len(train_nusc_infos), len(val_nusc_infos)))
         data = dict(infos=train_nusc_infos, metadata=metadata)
-        info_path = osp.join(info_prefix,
+        info_path = osp.join(root_path,
                              '{}_infos_train.pkl'.format(info_prefix))
         mmcv.dump(data, info_path)
         data['infos'] = val_nusc_infos
-        info_val_path = osp.join(info_prefix,
+        info_val_path = osp.join(root_path,
                                  '{}_infos_val.pkl'.format(info_prefix))
         mmcv.dump(data, info_val_path)
-
+        data['infos'] = train_nusc_infos + val_nusc_infos
+        info_all_path = osp.join(root_path,
+                                 '{}_infos_all.pkl'.format(info_prefix))
+        mmcv.dump(data, info_all_path)
 
 def get_available_scenes(nusc):
     """Get available scenes from the input nuscenes class.

@@ -106,8 +106,8 @@ class ImageAug3D:
         self.rot_lim = rot_lim
         self.is_train = is_train
 
-    def sample_augmentation(self, results):
-        W, H = results["ori_shape"]
+    def sample_augmentation(self, results, key):
+        W, H = results[key + "_ori_shape"] if key in ["map1", "map2"] else results["ori_shape"]
         fH, fW = self.final_dim
         if self.is_train:
             resize = np.random.uniform(*self.resize_lim)
@@ -164,31 +164,39 @@ class ImageAug3D:
         return img, rotation, translation
 
     def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        imgs = data["img"]
-        new_imgs = []
-        transforms = []
-        for img in imgs:
-            resize, resize_dims, crop, flip, rotate = self.sample_augmentation(data)
-            post_rot = torch.eye(2)
-            post_tran = torch.zeros(2)
-            new_img, rotation, translation = self.img_transform(
-                img,
-                post_rot,
-                post_tran,
-                resize=resize,
-                resize_dims=resize_dims,
-                crop=crop,
-                flip=flip,
-                rotate=rotate,
-            )
-            transform = torch.eye(4)
-            transform[:2, :2] = rotation
-            transform[:2, 3] = translation
-            new_imgs.append(new_img)
-            transforms.append(transform.numpy())
-        data["img"] = new_imgs
-        # update the calibration matrices
-        data["img_aug_matrix"] = transforms
+        keys = ['img']
+        if 'map1' in data:
+            keys.append('map1')
+        if 'map2' in data:
+            keys.append('map2')
+            
+        for key in keys:
+            imgs = data[key]
+            new_imgs = []
+            transforms = []
+            for img in imgs:
+                resize, resize_dims, crop, flip, rotate = self.sample_augmentation(data, key)
+                post_rot = torch.eye(2)
+                post_tran = torch.zeros(2)
+                new_img, rotation, translation = self.img_transform(
+                    img,
+                    post_rot,
+                    post_tran,
+                    resize=resize,
+                    resize_dims=resize_dims,
+                    crop=crop,
+                    flip=flip,
+                    rotate=rotate,
+                )
+                transform = torch.eye(4)
+                transform[:2, :2] = rotation
+                transform[:2, 3] = translation
+                new_imgs.append(new_img)
+                transforms.append(transform.numpy())
+            data[key] = new_imgs
+            # update the calibration matrices
+            if (key == "img"):
+                data["img_aug_matrix"] = transforms
         return data
 
 
@@ -269,54 +277,61 @@ class GridMask:
     def __call__(self, results):
         if np.random.rand() > self.prob:
             return results
-        imgs = results["img"]
-        h = imgs[0].shape[0]
-        w = imgs[0].shape[1]
-        self.d1 = 2
-        self.d2 = min(h, w)
-        hh = int(1.5 * h)
-        ww = int(1.5 * w)
-        d = np.random.randint(self.d1, self.d2)
-        if self.ratio == 1:
-            self.l = np.random.randint(1, d)
-        else:
-            self.l = min(max(int(d * self.ratio + 0.5), 1), d - 1)
-        mask = np.ones((hh, ww), np.float32)
-        st_h = np.random.randint(d)
-        st_w = np.random.randint(d)
-        if self.use_h:
-            for i in range(hh // d):
-                s = d * i + st_h
-                t = min(s + self.l, hh)
-                mask[s:t, :] *= 0
-        if self.use_w:
-            for i in range(ww // d):
-                s = d * i + st_w
-                t = min(s + self.l, ww)
-                mask[:, s:t] *= 0
+        keys = ['img']
+        if 'map1' in results:
+            keys.append('map1')
+        if 'map2' in results:
+            keys.append('map2')
+        for key in keys:
+            imgs = results[key]
+            imgs = [imgs] if not isinstance(imgs, list) else imgs
+            h = imgs[0].shape[0]
+            w = imgs[0].shape[1]
+            self.d1 = 2
+            self.d2 = min(h, w)
+            hh = int(1.5 * h)
+            ww = int(1.5 * w)
+            d = np.random.randint(self.d1, self.d2)
+            if self.ratio == 1:
+                self.l = np.random.randint(1, d)
+            else:
+                self.l = min(max(int(d * self.ratio + 0.5), 1), d - 1)
+            mask = np.ones((hh, ww), np.float32)
+            st_h = np.random.randint(d)
+            st_w = np.random.randint(d)
+            if self.use_h:
+                for i in range(hh // d):
+                    s = d * i + st_h
+                    t = min(s + self.l, hh)
+                    mask[s:t, :] *= 0
+            if self.use_w:
+                for i in range(ww // d):
+                    s = d * i + st_w
+                    t = min(s + self.l, ww)
+                    mask[:, s:t] *= 0
 
-        r = np.random.randint(self.rotate)
-        mask = Image.fromarray(np.uint8(mask))
-        mask = mask.rotate(r)
-        mask = np.asarray(mask)
-        mask = mask[
-            (hh - h) // 2 : (hh - h) // 2 + h, (ww - w) // 2 : (ww - w) // 2 + w
-        ]
+            r = np.random.randint(self.rotate)
+            mask = Image.fromarray(np.uint8(mask))
+            mask = mask.rotate(r)
+            mask = np.asarray(mask)
+            mask = mask[
+                (hh - h) // 2 : (hh - h) // 2 + h, (ww - w) // 2 : (ww - w) // 2 + w
+            ]
 
-        mask = mask.astype(np.float32)
-        mask = mask[:, :, None]
-        if self.mode == 1:
-            mask = 1 - mask
+            mask = mask.astype(np.float32)
+            mask = mask[:, :, None]
+            if self.mode == 1:
+                mask = 1 - mask
 
-        # mask = mask.expand_as(imgs[0])
-        if self.offset:
-            offset = torch.from_numpy(2 * (np.random.rand(h, w) - 0.5)).float()
-            offset = (1 - mask) * offset
-            imgs = [x * mask + offset for x in imgs]
-        else:
-            imgs = [x * mask for x in imgs]
-
-        results.update(img=imgs)
+            # mask = mask.expand_as(imgs[0])
+            if self.offset:
+                offset = torch.from_numpy(2 * (np.random.rand(h, w) - 0.5)).float()
+                offset = (1 - mask) * offset
+                imgs = [x * mask + offset for x in imgs]
+            else:
+                imgs = [x * mask for x in imgs]
+            results[key] = imgs
+        # results.update(img=imgs)
         return results
 
 
@@ -1001,7 +1016,13 @@ class ImageNormalize:
         )
 
     def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        data["img"] = [self.compose(img) for img in data["img"]]
+        keys = ['img']
+        if 'map1' in data:
+            keys.append('map1')
+        if 'map2' in data:
+            keys.append('map2')
+        for key in keys:
+            data[key] = [self.compose(img) for img in data[key]]
         data["img_norm_cfg"] = dict(mean=self.mean, std=self.std)
         return data
 

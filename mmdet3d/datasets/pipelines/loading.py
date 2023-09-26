@@ -7,6 +7,7 @@ from mmdet3d.core.points import RadarPoints
 from nuscenes.utils.data_classes import RadarPointCloud
 from nuscenes.map_expansion.map_api import NuScenesMap
 from nuscenes.map_expansion.map_api import locations as LOCATIONS
+import pickle
 from PIL import Image
 
 from mmdet3d.core.points import BasePoints, get_points_type
@@ -23,25 +24,33 @@ class LoadMultiClassMapFromFiles:
         self.to_float32 = to_float32
         self.color_type = color_type
         self.mode = mode
+        self.scene_id = 0
+        if mode == "map1":
+            self.base_dir = "res/map_camera_bev/scene_"
+        elif mode == "map2":
+            self.base_dir = "res/map_lidar_bev/scene_"
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
 
     def __call__(self, results):
-        filename = results[self.mode + "_paths"]
-        # img is of shape (h, w, c, num_views)
+        # img is of shape (h, w, c)
         # modified for waymo
-        images = []
-        for name in filename:
-            images.append(Image.open(name))
-        results[self.mode + "_filename"] = filename
+        pkl_file = [os.path.join(self.base_dir, f"{self.scene_id}.pkl")]
+        with open(pkl_file, 'rb') as file:
+            img_data = pickle.load(file)
+            img = Image.fromarray(img_data)
+            imgs = [img] if not isinstance(img, list) else img
+        results[self.mode + "_filename"] = pkl_file
         # unravel to list, see `DefaultFormatBundle` in formating.py
         # which will transpose each image separately and then stack into array
-        results[self.mode] = images
+        results[self.mode] = imgs
         # [1600, 900]
-        results[self.mode + "_img_shape"] = images[0].size
-        results[self.mode + "_img_shape"] = images[0].size
+        results[self.mode + "_img_shape"] = img.size
+        results[self.mode + "_ori_shape"] = img.size
         # Set initial values for default meta_keys
-        results[self.mode + "_pad_shape"] = images[0].size
+        results[self.mode + "_pad_shape"] = img.size
         results[self.mode + "_scale_factor"] = 1.0
-        
+        self.scene_id += 1
         return results
 
 @PIPELINES.register_module()

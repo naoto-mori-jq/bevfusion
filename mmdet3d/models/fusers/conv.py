@@ -32,7 +32,10 @@ class MapInputConv(nn.Sequential):
             nn.Conv2d(self.in_channels, out_channels, 3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(True),
+            nn.Conv2d(self.out_channels, out_channels, 3, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(True),
         )
 
-    def forward(self, inputs: List[torch.Tensor]) -> torch.Tensor:
-        return super().forward(torch.cat(tuple(inputs), dim=1))
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        return super().forward(input)

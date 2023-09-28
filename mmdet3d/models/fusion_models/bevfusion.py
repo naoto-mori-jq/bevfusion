@@ -331,9 +331,13 @@ class BEVFusion(Base3DFusionModel):
             elif sensor == "radar":
                 feature = self.extract_features(radar, sensor)
             elif sensor == "map1":
+                B, N, C, H, W = map1.size()
+                map1 = map1.view(B, N*C, H, W)
                 feature = self.encoders["map1"](map1)
             elif sensor == "map2":
-                feature = self.encoders["map1"](map2)
+                B, N, C, H, W = map2.size()
+                map2 = map2.view(B, N*C, H, W)
+                feature = self.encoders["map2"](map2)
             else:
                 raise ValueError(f"unsupported sensor: {sensor}")
 

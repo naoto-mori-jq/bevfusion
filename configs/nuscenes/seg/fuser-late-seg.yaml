@@ -4,15 +4,15 @@ model:
     lidar: null
     map1:
       type: MapInputConv
-      in_channels: 12
+      in_channels: 6
       out_channels: 256
     map2:
       type: MapInputConv
-      in_channels: 12
+      in_channels: 6
       out_channels: 80
   fuser:
     type: ConvFuser
-    in_channels: 336
+    in_channels: [80, 256]
     out_channels: 256
   decoder:
     backbone:

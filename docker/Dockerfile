@@ -22,3 +22,4 @@ RUN pip install nuscenes-devkit
 RUN pip install mpi4py==3.0.3
 RUN pip install numba==0.48.0
 RUN pip install numpy==1.19.5
+RUN pip install setuptools==59.5.0

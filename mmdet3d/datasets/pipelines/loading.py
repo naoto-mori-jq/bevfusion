@@ -35,7 +35,7 @@ class LoadMultiClassMapFromFiles:
     def __call__(self, results):
         # img is of shape (h, w, c)
         # modified for waymo
-        pkl_file = [os.path.join(self.base_dir, f"scene_{self.scene_id}.pkl")]
+        pkl_file = os.path.join(self.base_dir, f"scene_{self.scene_id}.pkl")
         with open(pkl_file, 'rb') as file:
             img_data = pickle.load(file)
             if isinstance(img_data, torch.Tensor):

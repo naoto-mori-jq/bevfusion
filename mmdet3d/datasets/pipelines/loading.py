@@ -24,7 +24,6 @@ class LoadMultiClassMapFromFiles:
         self.to_float32 = to_float32
         self.color_type = color_type
         self.mode = mode
-        self.scene_id = 0
         if mode == "map1":
             self.base_dir = "res/map_camera_bev/"
         elif mode == "map2":
@@ -35,7 +34,7 @@ class LoadMultiClassMapFromFiles:
     def __call__(self, results):
         # img is of shape (h, w, c)
         # modified for waymo
-        pkl_file = os.path.join(self.base_dir, f"scene_{self.scene_id}.pkl")
+        pkl_file = os.path.join(self.base_dir, f"scene_{results['token']}.pkl")
         with open(pkl_file, 'rb') as file:
             img_data = pickle.load(file)
             if isinstance(img_data, torch.Tensor):
@@ -64,7 +63,6 @@ class LoadMultiClassMapFromFiles:
         # Set initial values for default meta_keys
         results[self.mode + "_pad_shape"] = imgs[0].size
         results[self.mode + "_scale_factor"] = 1.0
-        self.scene_id += 1
         return results
 
 @PIPELINES.register_module()

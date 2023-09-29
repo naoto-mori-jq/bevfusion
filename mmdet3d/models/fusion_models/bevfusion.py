@@ -398,6 +398,7 @@ class BEVFusion(Base3DFusionModel):
                     for k in range(batch_size):
                         outputs[k].update(
                             {
+                                "token": metas[k]["token"],
                                 "masks_bev": logits[k].cpu(),
                                 "gt_masks_bev": gt_masks_bev[k].cpu(),
                             }

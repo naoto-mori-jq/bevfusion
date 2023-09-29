@@ -217,7 +217,7 @@ def main():
             
             for i, scene in enumerate(outputs):
                 # シーンデータをファイルに保存
-                scene_file = os.path.join(scenes_dir, f'scene_{i}.pkl')
+                scene_file = os.path.join(scenes_dir, f'scene_{scene["token"]}.pkl')
                 mmcv.dump(scene["masks_bev"], scene_file)
         kwargs = {} if args.eval_options is None else args.eval_options
         if args.format_only:

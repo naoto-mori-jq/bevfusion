@@ -109,7 +109,7 @@ class ImageAug3D:
     def sample_augmentation(self, results, key):
         W, H = results[key + "_ori_shape"] if key in ["map1", "map2"] else results["ori_shape"]
         fH, fW = self.final_dim
-        if self.is_train:
+        if False:
             resize = np.random.uniform(*self.resize_lim)
             resize_dims = (int(W * resize), int(H * resize))
             newW, newH = resize_dims

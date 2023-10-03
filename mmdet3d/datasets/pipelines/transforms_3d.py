@@ -107,7 +107,7 @@ class ImageAug3D:
         self.is_train = is_train
 
     def sample_augmentation(self, results, key):
-        W, H = results[key + "_ori_shape"] if key in ["map1", "map2"] else results["ori_shape"]
+        W, H = results["ori_shape"]
         fH, fW = self.final_dim
         if False:
             resize = np.random.uniform(*self.resize_lim)
@@ -135,11 +135,11 @@ class ImageAug3D:
         self, img, rotation, translation, resize, resize_dims, crop, flip, rotate
     ):
         # adjust image
-        img = img.resize(resize_dims)
-        img = img.crop(crop)
-        if flip:
-            img = img.transpose(method=Image.FLIP_LEFT_RIGHT)
-        img = img.rotate(rotate)
+        # img = img.resize(resize_dims)
+        # img = img.crop(crop)
+        # if flip:
+        #     img = img.transpose(method=Image.FLIP_LEFT_RIGHT)
+        # img = img.rotate(rotate)
 
         # post-homography transformation
         rotation *= resize
@@ -165,10 +165,10 @@ class ImageAug3D:
 
     def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
         keys = ['img']
-        if 'map1' in data:
-            keys.append('map1')
-        if 'map2' in data:
-            keys.append('map2')
+        # if 'map1' in data:
+        #     keys.append('map1')
+        # if 'map2' in data:
+        #     keys.append('map2')
             
         for key in keys:
             imgs = data[key]
@@ -278,10 +278,10 @@ class GridMask:
         if np.random.rand() > self.prob:
             return results
         keys = ['img']
-        if 'map1' in results:
-            keys.append('map1')
-        if 'map2' in results:
-            keys.append('map2')
+        # if 'map1' in results:
+        #     keys.append('map1')
+        # if 'map2' in results:
+        #     keys.append('map2')
         for key in keys:
             imgs = results[key]
             imgs = [imgs] if not isinstance(imgs, list) else imgs
@@ -342,7 +342,7 @@ class RandomFlip3D:
         flip_vertical = random.choice([0, 1])
 
         rotation = np.eye(3)
-        if flip_horizontal:
+        if False:
             rotation = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]]) @ rotation
             if "points" in data:
                 data["points"].flip("horizontal")
@@ -1017,10 +1017,10 @@ class ImageNormalize:
 
     def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
         keys = ['img']
-        if 'map1' in data:
-            keys.append('map1')
-        if 'map2' in data:
-            keys.append('map2')
+        # if 'map1' in data:
+        #     keys.append('map1')
+        # if 'map2' in data:
+        #     keys.append('map2')
         for key in keys:
             data[key] = [self.compose(img) for img in data[key]]
         data["img_norm_cfg"] = dict(mean=self.mean, std=self.std)

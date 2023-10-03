@@ -1,6 +1,8 @@
 from typing import Any, Dict
 
+import os
 import torch
+import mmcv
 from mmcv.runner import auto_fp16, force_fp32
 from torch import nn
 from torch.nn import functional as F
@@ -365,7 +367,16 @@ class BEVFusion(Base3DFusionModel):
                     pred_dict = head(x, metas)
                     losses = head.loss(gt_bboxes_3d, gt_labels_3d, pred_dict)
                 elif type == "map":
-                    losses = head(x, gt_masks_bev)
+                    for k in range(batch_size):
+                        if metas[k]["token"] == "1aafa76cc85a430a90550a9e3635f7be":
+                            scene_file = os.path.join("temp_output/", f'map1_{metas[k]["token"]}.pkl')
+                            mmcv.dump(map1[k].cpu(), scene_file)
+                            scene_file = os.path.join("temp_output/", f'map2_{metas[k]["token"]}.pkl')
+                            mmcv.dump(map2[k].cpu(), scene_file)
+                            scene_file = os.path.join("temp_output/", f'gt_masks_bev_{metas[k]["token"]}.pkl')
+                            mmcv.dump(gt_masks_bev[k].cpu(), scene_file)
+                        else:
+                            losses = head(x, gt_masks_bev)
                 else:
                     raise ValueError(f"unsupported head: {type}")
                 for name, val in losses.items():

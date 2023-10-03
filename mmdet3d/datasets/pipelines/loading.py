@@ -40,28 +40,29 @@ class LoadMultiClassMapFromFiles:
             if isinstance(img_data, torch.Tensor):
                 img_data = img_data.numpy()  # TensorをNumPy配列に変換する場合
             img = np.transpose(img_data, (1, 2, 0))
-        img1, img2 = np.split(img, 2, axis=-1)
+        imgs = [img]
+        # img1, img2 = np.split(img, 2, axis=-1)
 
-        # Ensure the pixel values are within 0-255 range
-        img1 = np.clip(img1, 0, 1) * 255
-        img2 = np.clip(img2, 0, 1) * 255
+        # # Ensure the pixel values are within 0-255 range
+        # img1 = np.clip(img1, 0, 1) * 255
+        # img2 = np.clip(img2, 0, 1) * 255
 
-        # Convert img1 and img2 to uint8 data type
-        img1 = img1.astype(np.uint8)
-        img2 = img2.astype(np.uint8)
+        # # Convert img1 and img2 to uint8 data type
+        # img1 = img1.astype(np.uint8)
+        # img2 = img2.astype(np.uint8)
 
-        # img1とimg2をリストに格納する
-        imgs = [Image.fromarray(img1), Image.fromarray(img2)]
+        # # img1とimg2をリストに格納する
+        # imgs = [Image.fromarray(img1), Image.fromarray(img2)]
         
         results[self.mode + "_filename"] = pkl_file
         # unravel to list, see `DefaultFormatBundle` in formating.py
         # which will transpose each image separately and then stack into array
         results[self.mode] = imgs
         # [1600, 900]
-        results[self.mode + "_img_shape"] = imgs[0].size
-        results[self.mode + "_ori_shape"] = imgs[0].size
+        results[self.mode + "_img_shape"] = img.size
+        results[self.mode + "_ori_shape"] = img.size
         # Set initial values for default meta_keys
-        results[self.mode + "_pad_shape"] = imgs[0].size
+        results[self.mode + "_pad_shape"] = img.size
         results[self.mode + "_scale_factor"] = 1.0
         return results
 
@@ -113,7 +114,6 @@ class LoadMultiViewImageFromFiles:
             images.append(Image.open(name))
         
         #TODO: consider image padding in waymo
-
         results["filename"] = filename
         # unravel to list, see `DefaultFormatBundle` in formating.py
         # which will transpose each image separately and then stack into array

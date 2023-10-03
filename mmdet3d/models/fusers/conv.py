@@ -39,3 +39,28 @@ class MapInputConv(nn.Sequential):
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         return super().forward(input)
+
+@FUSERS.register_module()
+class SEBlock(nn.Module):
+    def __init__(self, in_channels: int, reduction_ratio: int = 16) -> None:
+        super(SEBlock, self).__init__()
+        self.in_channels = in_channels
+        self.reduced_channels = max(1, in_channels // reduction_ratio)
+        
+        # Squeeze operation.
+        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
+        
+        # Excitation operation.
+        self.fc1 = nn.Linear(in_channels, self.reduced_channels, bias=False)
+        self.relu = nn.ReLU(inplace=True)
+        self.fc2 = nn.Linear(self.reduced_channels, in_channels, bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        b, c, _, _ = x.size()
+        out = self.global_avg_pool(x).view(b, c)
+        out = self.fc1(out)
+        out = self.relu(out)
+        out = self.fc2(out)
+        out = self.sigmoid(out).view(b, c, 1, 1)
+        return x * out

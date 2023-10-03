@@ -103,10 +103,12 @@ class DefaultFormatBundle3D:
         if "img" in results:
             results["img"] = DC(torch.stack(results["img"]), stack=True)
         if "map1" in results:
-            results["map1"] = DC(torch.stack(results["map1"]), stack=True)
+            transposed_map1 = np.transpose(np.array(results["map1"]), (0, 3, 1, 2))
+            results["map1"] = DC(torch.tensor(transposed_map1).float(), stack=True)
         if "map2" in results:
-            results["map2"] = DC(torch.stack(results["map2"]), stack=True)
-
+            transposed_map2 = np.transpose(np.array(results["map2"]), (0, 3, 1, 2))
+            results["map2"] = DC(torch.tensor(transposed_map2).float(), stack=True)
+            
         for key in [
             "proposals",
             "gt_bboxes",

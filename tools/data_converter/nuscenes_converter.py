@@ -59,6 +59,9 @@ def create_nuscenes_infos(root_path,
     # filter existing scenes.
     available_scenes = get_available_scenes(nusc)
     available_scene_names = [s['name'] for s in available_scenes]
+    available_scene_night_tokens = [s['token'] for s in available_scenes if "night" in s['description'].lower()]
+    available_scene_rain_tokens = [s['token'] for s in available_scenes if "rain" in s['description'].lower()]
+
     train_scenes = list(
         filter(lambda x: x in available_scene_names, train_scenes))
     val_scenes = list(filter(lambda x: x in available_scene_names, val_scenes))
@@ -70,16 +73,17 @@ def create_nuscenes_infos(root_path,
         available_scenes[available_scene_names.index(s)]['token']
         for s in val_scenes
     ])
+    val_scenes_night = val_scenes.intersection(set(available_scene_night_tokens))
+    val_scenes_rain = val_scenes.intersection(set(available_scene_rain_tokens))
 
     test = 'test' in version
     if test:
         print('test scene: {}'.format(len(train_scenes)))
     else:
-        print('train scene: {}, val scene: {}'.format(
-            len(train_scenes), len(val_scenes)))
-    train_nusc_infos, val_nusc_infos = _fill_trainval_infos(
-        nusc, train_scenes, val_scenes, test, max_sweeps=max_sweeps, max_radar_sweeps=max_radar_sweeps)
-
+        print('train scene: {}, val scene: {}, val scene night: {}, val scene rain: {}'.format(
+            len(train_scenes), len(val_scenes), len(val_scenes_night), len(val_scenes_rain)))
+    train_nusc_infos, val_nusc_infos, val_nusc_night_infos, val_nusc_rain_infos = _fill_trainval_infos(
+        nusc, train_scenes, val_scenes, val_scenes_night, val_scenes_rain, test, max_sweeps=max_sweeps, max_radar_sweeps=max_radar_sweeps)
     metadata = dict(version=version)
     if test:
         print('test sample: {}'.format(len(train_nusc_infos)))
@@ -98,6 +102,14 @@ def create_nuscenes_infos(root_path,
         data['infos'] = val_nusc_infos
         info_val_path = osp.join(root_path,
                                  '{}_infos_val.pkl'.format(info_prefix))
+        mmcv.dump(data, info_val_path)
+        data['infos'] = val_nusc_night_infos
+        info_val_path = osp.join(root_path,
+                                 '{}_infos_val_night.pkl'.format(info_prefix))
+        mmcv.dump(data, info_val_path)
+        data['infos'] = val_nusc_rain_infos
+        info_val_path = osp.join(root_path,
+                                 '{}_infos_val_rain.pkl'.format(info_prefix))
         mmcv.dump(data, info_val_path)
         data['infos'] = train_nusc_infos + val_nusc_infos
         info_all_path = osp.join(root_path,
@@ -145,6 +157,8 @@ def get_available_scenes(nusc):
 def _fill_trainval_infos(nusc,
                          train_scenes,
                          val_scenes,
+                         val_scenes_night,
+                         val_scenes_rain,
                          test=False,
                          max_sweeps=10, 
                          max_radar_sweeps=10):
@@ -163,6 +177,8 @@ def _fill_trainval_infos(nusc,
     """
     train_nusc_infos = []
     val_nusc_infos = []
+    val_nusc_night_infos = []
+    val_nusc_rain_infos = []
     token2idx = {}
 
     i_ = 0
@@ -307,6 +323,10 @@ def _fill_trainval_infos(nusc,
         else:
             val_nusc_infos.append(info)
             token2idx[info['token']] = ('val', len(val_nusc_infos) - 1)
+            if sample['scene_token'] in val_scenes_night:
+                val_nusc_night_infos.append(info)
+            if sample['scene_token'] in val_scenes_rain:
+                val_nusc_rain_infos.append(info)
     
     for info in train_nusc_infos:
         prev_token = info['prev_token']
@@ -325,8 +345,26 @@ def _fill_trainval_infos(nusc,
             prev_set, prev_idx = token2idx[prev_token]
             assert prev_set == 'val'
             info['prev'] = prev_idx
+    
+    for info in val_nusc_night_infos:
+        prev_token = info['prev_token']
+        if prev_token == '':
+            info['prev'] = -1
+        else:
+            prev_set, prev_idx = token2idx[prev_token]
+            assert prev_set == 'val'
+            info['prev'] = prev_idx
+    
+    for info in val_nusc_rain_infos:
+        prev_token = info['prev_token']
+        if prev_token == '':
+            info['prev'] = -1
+        else:
+            prev_set, prev_idx = token2idx[prev_token]
+            assert prev_set == 'val'
+            info['prev'] = prev_idx
 
-    return train_nusc_infos, val_nusc_infos
+    return train_nusc_infos, val_nusc_infos, val_nusc_night_infos, val_nusc_rain_infos
 
 
 def obtain_sensor2top(nusc,

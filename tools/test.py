@@ -237,7 +237,9 @@ def main():
             eval_kwargs.update(dict(metric=args.eval, **kwargs))
             if args.miou:
                 print(f"\nwriting results to {args.miou}")
-                mmcv.dump(dataset.evaluate(outputs, **eval_kwargs), args.miou)
+                result = dataset.evaluate(outputs, **eval_kwargs)
+                print(result)
+                mmcv.dump(result, args.miou)
 
 
 if __name__ == "__main__":

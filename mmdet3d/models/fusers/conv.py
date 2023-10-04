@@ -64,3 +64,55 @@ class SEBlock(nn.Module):
         out = self.fc2(out)
         out = self.sigmoid(out).view(b, c, 1, 1)
         return x * out
+
+@FUSERS.register_module()
+class PositionalEncoding2D(nn.Module):
+    def __init__(self, channels: int) -> None:
+        """
+        Initialize 2D PositionalEncoding.
+        
+        Parameters:
+        - channels (int): The number of channels in the input feature map.
+        """
+        super(PositionalEncoding2D, self).__init__()
+        self.channels = channels
+        self.dim = channels // 2
+        self.encoding = None
+
+    def create_positional_encoding(self, height: int, width: int) -> torch.Tensor:
+        """
+        Create 2D positional encoding.
+        
+        Parameters:
+        - height (int): The height of the input feature map.
+        - width (int): The width of the input feature map.
+        
+        Returns:
+        - torch.Tensor: The positional encoding.
+        """
+        y_pos = torch.arange(height).unsqueeze(1).repeat(1, width).float()
+        x_pos = torch.arange(width).unsqueeze(0).repeat(height, 1).float()
+        
+        div_term = torch.exp(torch.arange(0, self.dim, 2).float() * (-math.log(10000.0) / self.dim))
+        
+        pos_enc = torch.zeros(height, width, self.channels)
+        pos_enc[:, :, 0:self.dim:2] = torch.sin(y_pos * div_term) + torch.sin(x_pos * div_term)
+        pos_enc[:, :, 1:self.dim:2] = torch.cos(y_pos * div_term) + torch.cos(x_pos * div_term)
+
+        return pos_enc.permute(2, 0, 1).unsqueeze(0)  # Shape: [1, C, H, W]
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward method for PositionalEncoding2D.
+        
+        Parameters:
+        - x (torch.Tensor): Input tensor.
+        
+        Returns:
+        - torch.Tensor: Output tensor with positional encoding added.
+        """
+        b, _, h, w = x.size()
+        if self.encoding is None or self.encoding.size(2) != h or self.encoding.size(3) != w:
+            self.encoding = self.create_positional_encoding(h, w).to(x.device)
+        
+        return x + self.encoding

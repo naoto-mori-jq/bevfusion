@@ -54,6 +54,14 @@ input_modality:
 
 train_pipeline:
   -
+    type: LoadMultiClassMapFromFiles
+    to_float32: true
+    mode: map1
+  -
+    type: LoadMultiClassMapFromFiles
+    to_float32: true
+    mode: map2
+  -
     type: LoadMultiViewImageFromFiles
     to_float32: true
   -
@@ -171,6 +179,8 @@ train_pipeline:
     keys:
       - img
       - points
+      - map1
+      - map2
       - gt_bboxes_3d
       - gt_labels_3d
       - gt_masks_bev
@@ -188,6 +198,14 @@ train_pipeline:
     keyframe_only: true 
 
 test_pipeline:
+  -
+    type: LoadMultiClassMapFromFiles
+    to_float32: true
+    mode: map1
+  -
+    type: LoadMultiClassMapFromFiles
+    to_float32: true
+    mode: map2
   -
     type: LoadMultiViewImageFromFiles
     to_float32: true
@@ -247,6 +265,8 @@ test_pipeline:
     keys:
       - img
       - points
+      - map1
+      - map2
       - gt_bboxes_3d
       - gt_labels_3d
       - gt_masks_bev
@@ -264,8 +284,8 @@ test_pipeline:
     keyframe_only: true 
 
 data:
-  samples_per_gpu: 4
-  workers_per_gpu: 4
+  samples_per_gpu: 2
+  workers_per_gpu: 2
   train:
     type: CBGSDataset
     dataset:
@@ -292,7 +312,7 @@ data:
   test:
     type: ${dataset_type}
     dataset_root: ${dataset_root}
-    ann_file: ${dataset_root + "nuscenes_infos_train.pkl"}
+    ann_file: ${dataset_root + "nuscenes_infos_val.pkl"}
     pipeline: ${test_pipeline}
     object_classes: ${object_classes}
     map_classes: ${map_classes}

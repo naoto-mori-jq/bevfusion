@@ -7,7 +7,7 @@ model:
       type: BEVSegmentationHead
       in_channels: 256
       grid_transform:
-        input_scope: [[-51.2, 51.2, 0.8], [-51.2, 51.2, 0.8]]
+        input_scope: [[-50, 50, 0.5], [-50, 50, 0.5]]
         output_scope: [[-50, 50, 0.5], [-50, 50, 0.5]]
       classes: ${map_classes}
       loss: focal

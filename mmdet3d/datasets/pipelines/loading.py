@@ -39,6 +39,8 @@ class LoadMultiClassMapFromFiles:
             img_data = pickle.load(file)
             if isinstance(img_data, torch.Tensor):
                 img_data = img_data.numpy()  # TensorをNumPy配列に変換する場合
+            # if self.mode == "map2":
+            #     img_data[:, :, :] = 0
             img = np.transpose(img_data, (1, 2, 0))
         imgs = [img]
         # img1, img2 = np.split(img, 2, axis=-1)

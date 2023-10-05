@@ -73,6 +73,8 @@ def create_nuscenes_infos(root_path,
         available_scenes[available_scene_names.index(s)]['token']
         for s in val_scenes
     ])
+    train_scenes_night = train_scenes.intersection(set(available_scene_night_tokens))
+    train_scenes_rain = train_scenes.intersection(set(available_scene_rain_tokens))
     val_scenes_night = val_scenes.intersection(set(available_scene_night_tokens))
     val_scenes_rain = val_scenes.intersection(set(available_scene_rain_tokens))
 
@@ -80,8 +82,8 @@ def create_nuscenes_infos(root_path,
     if test:
         print('test scene: {}'.format(len(train_scenes)))
     else:
-        print('train scene: {}, val scene: {}, val scene night: {}, val scene rain: {}'.format(
-            len(train_scenes), len(val_scenes), len(val_scenes_night), len(val_scenes_rain)))
+        print('train scene: {}, val scene: {}, train scene night: {}, train scene rain: {}, val scene night: {}, val scene rain: {}'.format(
+            len(train_scenes), len(val_scenes), len(train_scenes_night), len(train_scenes_rain), len(val_scenes_night), len(val_scenes_rain)))
     train_nusc_infos, val_nusc_infos, val_nusc_night_infos, val_nusc_rain_infos = _fill_trainval_infos(
         nusc, train_scenes, val_scenes, val_scenes_night, val_scenes_rain, test, max_sweeps=max_sweeps, max_radar_sweeps=max_radar_sweeps)
     metadata = dict(version=version)

@@ -89,6 +89,14 @@ def train_model(
         optimizer_config = cfg.optimizer_config
 
     # register hooks
+    print("cfg.lr_config : ", cfg.lr_config)
+    if isinstance(cfg.lr_config.get('target_ratio', None), str):
+        try:
+            cfg.lr_config['target_ratio'] = eval(cfg.lr_config['target_ratio'])
+        except:
+            raise ValueError("Unable to convert 'target_ratio' to tuple")
+
+    print("Modified cfg.lr_config : ", cfg.lr_config)
     runner.register_training_hooks(
         cfg.lr_config,
         optimizer_config,

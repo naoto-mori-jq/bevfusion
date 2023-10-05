@@ -135,11 +135,11 @@ class ImageAug3D:
         self, img, rotation, translation, resize, resize_dims, crop, flip, rotate
     ):
         # adjust image
-        # img = img.resize(resize_dims)
-        # img = img.crop(crop)
-        # if flip:
-        #     img = img.transpose(method=Image.FLIP_LEFT_RIGHT)
-        # img = img.rotate(rotate)
+        img = img.resize(resize_dims)
+        img = img.crop(crop)
+        if flip:
+            img = img.transpose(method=Image.FLIP_LEFT_RIGHT)
+        img = img.rotate(rotate)
 
         # post-homography transformation
         rotation *= resize
@@ -195,8 +195,7 @@ class ImageAug3D:
                 transforms.append(transform.numpy())
             data[key] = new_imgs
             # update the calibration matrices
-            if (key == "img"):
-                data["img_aug_matrix"] = transforms
+            data["img_aug_matrix"] = transforms
         return data
 
 
@@ -211,7 +210,7 @@ class GlobalRotScaleTrans:
     def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
         transform = np.eye(4).astype(np.float32)
 
-        if self.is_train:
+        if False:#self.is_train:
             scale = random.uniform(*self.resize_lim)
             theta = random.uniform(*self.rot_lim)
             translation = np.array([random.normal(0, self.trans_lim) for i in range(3)])
@@ -342,7 +341,7 @@ class RandomFlip3D:
         flip_vertical = random.choice([0, 1])
 
         rotation = np.eye(3)
-        if False:
+        if False:#flip_horizontal
             rotation = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]]) @ rotation
             if "points" in data:
                 data["points"].flip("horizontal")
@@ -353,7 +352,7 @@ class RandomFlip3D:
             if "gt_masks_bev" in data:
                 data["gt_masks_bev"] = data["gt_masks_bev"][:, :, ::-1].copy()
 
-        if flip_vertical:
+        if False:#flip_vertical
             rotation = np.array([[-1, 0, 0], [0, 1, 0], [0, 0, 1]]) @ rotation
             if "points" in data:
                 data["points"].flip("vertical")
@@ -363,6 +362,14 @@ class RandomFlip3D:
                 data["gt_bboxes_3d"].flip("vertical")
             if "gt_masks_bev" in data:
                 data["gt_masks_bev"] = data["gt_masks_bev"][:, ::-1, :].copy()
+                
+        map_robust_flg = random.choice([0, 1, 2])
+        if map_robust_flg == 0:
+            if 'map1' in data:
+                data['map1'][0][:, :, :] = 0
+        elif map_robust_flg == 1:
+            if 'map2' in data:
+                data['map2'][0][:, :, :] = 0
 
         data["lidar_aug_matrix"][:3, :] = rotation @ data["lidar_aug_matrix"][:3, :]
         return data

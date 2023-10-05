@@ -41,78 +41,66 @@ class MapInputConv(nn.Sequential):
         return super().forward(input)
 
 @FUSERS.register_module()
-class SEBlock(nn.Module):
-    def __init__(self, in_channels: int, reduction_ratio: int = 16) -> None:
-        super(SEBlock, self).__init__()
-        self.in_channels = in_channels
-        self.reduced_channels = max(1, in_channels // reduction_ratio)
-        
-        # Squeeze operation.
-        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
-        
-        # Excitation operation.
-        self.fc1 = nn.Linear(in_channels, self.reduced_channels, bias=False)
-        self.relu = nn.ReLU(inplace=True)
-        self.fc2 = nn.Linear(self.reduced_channels, in_channels, bias=False)
-        self.sigmoid = nn.Sigmoid()
+class MapInputSeparatebleConv(nn.Sequential):
+    def __init__(self, in_channels: int, out_channels: int) -> None:
+        super().__init__(
+            nn.Conv2d(in_channels, out_channels, 1, groups=in_channels, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(True),
+            nn.Conv2d(out_channels, out_channels, 3, groups=in_channels, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(True),
+            nn.Conv2d(out_channels, out_channels, 3, groups=in_channels, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(True),
+        )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        b, c, _, _ = x.size()
-        out = self.global_avg_pool(x).view(b, c)
-        out = self.fc1(out)
-        out = self.relu(out)
-        out = self.fc2(out)
-        out = self.sigmoid(out).view(b, c, 1, 1)
-        return x * out
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        return super().forward(input)
+    
+@FUSERS.register_module()
+class ChannelAttentionLayer(nn.Module):
+    def __init__(self, in_channels):
+        super(ChannelAttentionLayer, self).__init__()
+        self.in_channels = in_channels
+        self.fc = nn.Sequential(
+            nn.Linear(self.in_channels, self.in_channels//8, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.in_channels//8, self.in_channels, bias=False),
+            nn.Sigmoid()
+        )
+        
+    def forward(self, x):
+        # 入力テンソル x: [batch_size, channels, height, width]
+        # 平均プーリング
+        avg_pool = torch.mean(x, dim=[2, 3], keepdim=True) # [batch_size, channels, 1, 1]
+        avg_pool = avg_pool.view(avg_pool.size(0), -1)     # [batch_size, channels]
+        
+        # チャネルアテンション
+        y = self.fc(avg_pool)   # [batch_size, channels]
+        y = y.view(y.size(0), -1, 1, 1)  # [batch_size, channels, 1, 1]
+
+        # アテンションを適用
+        attention_applied = x * y  # [batch_size, channels, height, width]
+
+        return attention_applied
 
 @FUSERS.register_module()
-class PositionalEncoding2D(nn.Module):
-    def __init__(self, channels: int) -> None:
-        """
-        Initialize 2D PositionalEncoding.
-        
-        Parameters:
-        - channels (int): The number of channels in the input feature map.
-        """
-        super(PositionalEncoding2D, self).__init__()
-        self.channels = channels
-        self.dim = channels // 2
-        self.encoding = None
+class CustomAttentionModel(nn.Module):
+    def __init__(self, in_channels: List[int], out_channels: int):
+        super(CustomAttentionModel, self).__init__()
+        self.attention_layers = nn.ModuleList([
+            ChannelAttentionLayer(ch) for ch in in_channels
+        ])
+        self.conv_fuser = ConvFuser(in_channels, out_channels)
 
-    def create_positional_encoding(self, height: int, width: int) -> torch.Tensor:
-        """
-        Create 2D positional encoding.
-        
-        Parameters:
-        - height (int): The height of the input feature map.
-        - width (int): The width of the input feature map.
-        
-        Returns:
-        - torch.Tensor: The positional encoding.
-        """
-        y_pos = torch.arange(height).unsqueeze(1).repeat(1, width).float()
-        x_pos = torch.arange(width).unsqueeze(0).repeat(height, 1).float()
-        
-        div_term = torch.exp(torch.arange(0, self.dim, 2).float() * (-math.log(10000.0) / self.dim))
-        
-        pos_enc = torch.zeros(height, width, self.channels)
-        pos_enc[:, :, 0:self.dim:2] = torch.sin(y_pos * div_term) + torch.sin(x_pos * div_term)
-        pos_enc[:, :, 1:self.dim:2] = torch.cos(y_pos * div_term) + torch.cos(x_pos * div_term)
-
-        return pos_enc.permute(2, 0, 1).unsqueeze(0)  # Shape: [1, C, H, W]
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward method for PositionalEncoding2D.
-        
-        Parameters:
-        - x (torch.Tensor): Input tensor.
-        
-        Returns:
-        - torch.Tensor: Output tensor with positional encoding added.
-        """
-        b, _, h, w = x.size()
-        if self.encoding is None or self.encoding.size(2) != h or self.encoding.size(3) != w:
-            self.encoding = self.create_positional_encoding(h, w).to(x.device)
-        
-        return x + self.encoding
+    def forward(self, inputs: List[torch.Tensor]) -> torch.Tensor:
+        # 各入力に対してアテンションを適用
+        attended_inputs = [
+            att_layer(inp) for att_layer, inp in zip(self.attention_layers, inputs)
+        ]
+        # アテンションを適用したテンソルを連結
+        # concatenated = torch.cat(attended_inputs, dim=1)
+        # 畳み込みレイヤーを通して出力を計算
+        output = self.conv_fuser(attended_inputs)
+        return output
